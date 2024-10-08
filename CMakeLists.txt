@@ -14,8 +14,20 @@ find_package(catkin REQUIRED COMPONENTS
         geometry_msgs
         nav_msgs
         tf
+        message_generation
         )
+## Generate services in the 'srv' folder
+add_service_files(
+        FILES
+        astar_srv.srv
+)
 
+## Generate added messages and services with any dependencies listed here
+generate_messages(
+        DEPENDENCIES
+        geometry_msgs
+        nav_msgs
+)
 catkin_package()
 
 ########### 添加头文件

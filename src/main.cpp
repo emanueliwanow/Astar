@@ -8,6 +8,7 @@
 #include <opencv2/opencv.hpp>
 #include "Astar.h"
 #include "OccMapTransform.h"
+#include "astar/astar_srv.h"
 
 
 using namespace cv;
@@ -27,7 +28,7 @@ ros::Publisher path_pub;
 nav_msgs::OccupancyGrid OccGridMask;
 nav_msgs::Path path;
 pathplanning::AstarConfig config;
-pathplanning::Astar astar;
+pathplanning::Astar astar_class;
 OccupancyGridParam OccGridParam;
 Point startPoint, targetPoint;
 
@@ -64,7 +65,7 @@ void MapCallback(const nav_msgs::OccupancyGrid& msg)
     // Initial Astar
     Mat Mask;
     config.InflateRadius = round(InflateRadius / OccGridParam.resolution);
-    astar.InitAstar(Map, Mask, config);
+    astar_class.InitAstar(Map, Mask, config);
 
     // Publish Mask
     OccGridMask.header.stamp = ros::Time::now();
@@ -117,6 +118,58 @@ void TargetPointtCallback(const geometry_msgs::PoseStamped& msg)
 //    ROS_INFO("targetPoint: %f %f %d %d", msg.pose.position.x, msg.pose.position.y,
 //             targetPoint.x, targetPoint.y);
 }
+//------------------------------ Server functions ---------------------------------//
+
+bool AstarService(astar::astar_srv::Request &req, astar::astar_srv::Response &res)
+{
+    double start_time = ros::Time::now().toSec();
+    Point initial;
+    Point2d src_point = Point2d(req.initial.pose.pose.position.x, req.initial.pose.pose.position.y);
+    OccGridParam.Map2ImageTransform(src_point, initial);
+
+    Point goal;
+    Point2d src_point_goal = Point2d(req.goal.pose.position.x, req.goal.pose.position.y);
+    OccGridParam.Map2ImageTransform(src_point_goal, goal);
+
+    vector<Point> PathList;
+    astar_class.PathPlanning(initial, goal, PathList);
+    if(!PathList.empty())
+    {
+        res.path.header.stamp = ros::Time::now();
+        res.path.header.frame_id = "map";
+        res.path.poses.clear();
+        for(int i=0;i<PathList.size();i++)
+        {
+            Point2d dst_point;
+            OccGridParam.Image2MapTransform(PathList[i], dst_point);
+
+            geometry_msgs::PoseStamped pose_stamped;
+            pose_stamped.header.stamp = ros::Time::now();
+            pose_stamped.header.frame_id = "map";
+            pose_stamped.pose.position.x = dst_point.x;
+            pose_stamped.pose.position.y = dst_point.y;
+            pose_stamped.pose.position.z = 0;
+            res.path.poses.push_back(pose_stamped);
+        }
+        path_pub.publish(res.path);
+        double end_time = ros::Time::now().toSec();
+
+        //ROS_INFO("Find a valid path successfully! Use %f s", end_time - start_time);
+        res.success = true;
+        
+    }
+    else
+    {
+        ROS_ERROR("Could not find a valid path");
+        res.success = false;        
+    }
+    return true;
+
+}
+
+
+
+
 
 //-------------------------------- Main function ---------------------------------//
 int main(int argc, char * argv[])
@@ -148,10 +201,14 @@ int main(int argc, char * argv[])
     mask_pub = nh.advertise<nav_msgs::OccupancyGrid>("mask", 1);
     path_pub = nh.advertise<nav_msgs::Path>("nav_path", 10);
 
+    // Create services
+    ros::ServiceServer service = nh.advertiseService("astar_server", AstarService);
     // Loop and wait for callback
     ros::Rate loop_rate(rate);
+    
     while(ros::ok())
     {
+        /*
         if(start_flag)
         {
             double start_time = ros::Time::now().toSec();
@@ -189,6 +246,7 @@ int main(int argc, char * argv[])
             // Set flag
             start_flag = false;
         }
+        */
 
         if(map_flag)
         {
