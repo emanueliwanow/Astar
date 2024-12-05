@@ -138,8 +138,8 @@ Node* Astar::FindPath()
         // Traversal the neighborhood
         for(int k = 0;k < neighbor.rows;k++)
         {
-            int y = curY + neighbor.at<char>(k, 0);
-            int x = curX + neighbor.at<char>(k, 1);
+            int y = curY + neighbor.at<signed char>(k, 0);
+            int x = curX + neighbor.at<signed char>(k, 1);
             if(x < 0 || x >= width || y < 0 || y >= height)
             {
                 continue;
@@ -147,7 +147,7 @@ Node* Astar::FindPath()
             if(_LabelMap.at<uchar>(y, x) == free || _LabelMap.at<uchar>(y, x) == inOpenList)
             {
                 // Determine whether a diagonal line can pass
-                int dist1 = abs(neighbor.at<char>(k, 0)) + abs(neighbor.at<char>(k, 1));
+                int dist1 = abs(neighbor.at<signed char>(k, 0)) + abs(neighbor.at<signed char>(k, 1));
                 if(dist1 == 2 && _LabelMap.at<uchar>(y, curX) == obstacle && _LabelMap.at<uchar>(curY, x) == obstacle)
                     continue;
 
