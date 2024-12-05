@@ -14,7 +14,7 @@ void Astar::InitAstar(Mat& _Map, AstarConfig _config)
 
 void Astar::InitAstar(Mat& _Map, Mat& Mask, AstarConfig _config)
 {
-    char neighbor8[8][2] = {
+    signed char neighbor8[8][2] = {
             {-1, -1}, {-1, 0}, {-1, 1},
             {0, -1},            {0, 1},
             {1, -1},   {1, 0},  {1, 1}
